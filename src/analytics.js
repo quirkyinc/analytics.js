@@ -317,10 +317,11 @@ extend(Analytics.prototype, {
 
         // Allow for properties to be a function. And pass it the
         // link element that was clicked.
-        if (type(properties) === 'function') properties = properties.apply(el,[el]);
+        if (type(properties) === 'function') 
+          var linkProperties = properties.apply(el,[el]);
 
         // Fire a normal track call.
-        self.track(event, properties);
+        self.track(event, linkProperties);
 
         // To justify us preventing the default behavior we must:
         //
@@ -378,10 +379,11 @@ extend(Analytics.prototype, {
       var handler = function (e) {
         // Allow for properties to be a function. And pass it the form element
         // that was submitted.
-        if (type(properties) === 'function') properties = properties.apply(el,[el]);
+        if (type(properties) === 'function') 
+          var formProperties = properties.apply(el,[el]);
 
         // Fire a normal track call.
-        self.track(event, properties);
+        self.track(event, formProperties);
 
         // Prevent the form's default submit in all sane browsers, and IE.
         if (e.preventDefault)
