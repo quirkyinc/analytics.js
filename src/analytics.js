@@ -317,7 +317,7 @@ extend(Analytics.prototype, {
 
         // Allow for properties to be a function. And pass it the
         // link element that was clicked.
-        if (type(properties) === 'function') properties = properties(el);
+        if (type(properties) === 'function') properties = properties.apple(el,[el]);
 
         // Fire a normal track call.
         self.track(event, properties);
@@ -378,7 +378,7 @@ extend(Analytics.prototype, {
       var handler = function (e) {
         // Allow for properties to be a function. And pass it the form element
         // that was submitted.
-        if (type(properties) === 'function') properties = properties(el);
+        if (type(properties) === 'function') properties = properties.apply(el,[el]);
 
         // Fire a normal track call.
         self.track(event, properties);
