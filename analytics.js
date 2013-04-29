@@ -1,12 +1,5 @@
 ;(function(){
 
-
-/**
- * hasOwnProperty.
- */
-
-var has = Object.prototype.hasOwnProperty;
-
 /**
  * Require the given path.
  *
@@ -83,10 +76,10 @@ require.resolve = function(path) {
 
   for (var i = 0; i < paths.length; i++) {
     var path = paths[i];
-    if (has.call(require.modules, path)) return path;
+    if (require.modules.hasOwnProperty(path)) return path;
   }
 
-  if (has.call(require.aliases, index)) {
+  if (require.aliases.hasOwnProperty(index)) {
     return require.aliases[index];
   }
 };
@@ -140,7 +133,7 @@ require.register = function(path, definition) {
  */
 
 require.alias = function(from, to) {
-  if (!has.call(require.modules, from)) {
+  if (!require.modules.hasOwnProperty(from)) {
     throw new Error('Failed to alias "' + from + '", it does not exist');
   }
   require.aliases[to] = from;
@@ -202,7 +195,7 @@ require.relative = function(parent) {
    */
 
   localRequire.exists = function(path) {
-    return has.call(require.modules, localRequire.resolve(path));
+    return require.modules.hasOwnProperty(localRequire.resolve(path));
   };
 
   return localRequire;
@@ -468,7 +461,7 @@ require.register("component-event/index.js", function(exports, require, module){
 
 exports.bind = function(el, type, fn, capture){
   if (el.addEventListener) {
-    el.addEventListener(type, fn, capture);
+    el.addEventListener(type, fn, capture || false);
   } else {
     el.attachEvent('on' + type, fn);
   }
@@ -488,7 +481,7 @@ exports.bind = function(el, type, fn, capture){
 
 exports.unbind = function(el, type, fn, capture){
   if (el.removeEventListener) {
-    el.removeEventListener(type, fn, capture);
+    el.removeEventListener(type, fn, capture || false);
   } else {
     el.detachEvent('on' + type, fn);
   }
@@ -1094,40 +1087,13 @@ exports.right = function(str){
 };
 
 });
-require.register("redventures-reduce/index.js", function(exports, require, module){
-
-/**
- * Reduce `arr` with `fn`.
- *
- * @param {Array} arr
- * @param {Function} fn
- * @param {Mixed} initial
- *
- * TODO: combatible error handling?
- */
-
-module.exports = function(arr, fn, initial){  
-  var idx = 0;
-  var len = arr.length;
-  var curr = arguments.length == 3
-    ? initial
-    : arr[idx++];
-
-  while (idx < len) {
-    curr = fn.call(null, curr, arr[idx], ++idx, arr);
-  }
-  
-  return curr;
-};
-});
 require.register("component-querystring/index.js", function(exports, require, module){
 
 /**
  * Module dependencies.
  */
 
-var trim = require('trim')
-  , reduce = require('reduce');
+var trim = require('trim');
 
 /**
  * Parse the given query `str`.
@@ -1139,15 +1105,20 @@ var trim = require('trim')
 
 exports.parse = function(str){
   if ('string' != typeof str) return {};
+
   str = trim(str);
   if ('' == str) return {};
-  return reduce(str.split('&'), function(obj, pair){
-    var parts = pair.split('=');
+
+  var obj = {};
+  var pairs = str.split('&');
+  for (var i = 0; i < pairs.length; i++) {
+    var parts = pairs[i].split('=');
     obj[parts[0]] = null == parts[1]
       ? ''
       : decodeURIComponent(parts[1]);
-    return obj;
-  }, {});
+  }
+
+  return obj;
 };
 
 /**
@@ -1166,6 +1137,7 @@ exports.stringify = function(obj){
   }
   return pairs.join('&');
 };
+
 });
 require.register("component-type/index.js", function(exports, require, module){
 
@@ -1195,6 +1167,7 @@ module.exports = function(val){
 
   if (val === null) return 'null';
   if (val === undefined) return 'undefined';
+  if (val && val.nodeType === 1) return 'element';
   if (val === Object(val)) return 'object';
 
   return typeof val;
@@ -1217,7 +1190,7 @@ exports.parse = function(url){
   return {
     href: a.href,
     host: a.host || location.host,
-    port: a.port || location.port,
+    port: ('0' === a.port || '' === a.port) ? location.port : a.port,
     hash: a.hash,
     hostname: a.hostname || location.hostname,
     pathname: a.pathname.charAt(0) != '/' ? '/' + a.pathname : a.pathname,
@@ -1705,10 +1678,11 @@ extend(Analytics.prototype, {
 
         // Allow for properties to be a function. And pass it the
         // link element that was clicked.
-        if (type(properties) === 'function') properties = properties(el);
+        if (type(properties) === 'function') 
+          var linkProperties = properties.apply(el,[el]);
 
         // Fire a normal track call.
-        self.track(event, properties);
+        self.track(event, linkProperties);
 
         // To justify us preventing the default behavior we must:
         //
@@ -1766,10 +1740,11 @@ extend(Analytics.prototype, {
       var handler = function (e) {
         // Allow for properties to be a function. And pass it the form element
         // that was submitted.
-        if (type(properties) === 'function') properties = properties(el);
+        if (type(properties) === 'function') 
+          var formProperties = properties.apply(el,[el]);
 
         // Fire a normal track call.
-        self.track(event, properties);
+        self.track(event, formProperties);
 
         // Prevent the form's default submit in all sane browsers, and IE.
         if (e.preventDefault)
@@ -3374,7 +3349,7 @@ module.exports = Provider.extend({
         var g = a;
         'undefined' !== typeof f ? g = a[f] = [] : f = 'mixpanel';
         g.people = g.people || [];
-        h = ['disable', 'track', 'track_pageview', 'track_links', 'track_forms', 'register', 'register_once', 'unregister', 'identify', 'alias', 'name_tag', 'set_config', 'people.set', 'people.increment'];
+        h = ['disable','track','track_pageview','track_links', 'track_forms','register','register_once','unregister','identify','alias','name_tag', 'set_config','people.set','people.increment','people.track_charge','people.append'];
         for (e = 0; e < h.length; e++) d(g, h[e]);
         a._i.push([b, c, f]);
       };
@@ -3428,6 +3403,18 @@ module.exports = Provider.extend({
   track : function (event, properties) {
     window.mixpanel.track(event, properties);
 
+    if (this.options.complimentaryEvents) {
+      if (this.options.complimentaryEvents[event]) {
+        var events = this.options.complimentaryEvents[event];
+        if (typeof events === 'string') events = [events];
+        for (i = 0; i < events.length; i++) {
+          var properties = properties || {};
+          properties.originalEvent = event;
+          window.mixpanel.track(events[i], properties);
+        }
+      }
+    }
+    
     // Mixpanel handles revenue with a `transaction` call in their People
     // feature. So if we're using people, record a transcation.
     if (properties && properties.revenue && this.options.people) {
@@ -3465,6 +3452,7 @@ module.exports = Provider.extend({
   }
 
 });
+
 });
 require.register("analytics/src/providers/olark.js", function(exports, require, module){
 // Olark
@@ -3883,42 +3871,56 @@ module.exports = Provider.extend({
 });
 });
 require.alias("component-clone/index.js", "analytics/deps/clone/index.js");
+require.alias("component-clone/index.js", "clone/index.js");
 require.alias("component-type/index.js", "component-clone/deps/type/index.js");
 
 require.alias("component-cookie/index.js", "analytics/deps/cookie/index.js");
+require.alias("component-cookie/index.js", "cookie/index.js");
 
 require.alias("component-each/index.js", "analytics/deps/each/index.js");
+require.alias("component-each/index.js", "each/index.js");
 require.alias("component-type/index.js", "component-each/deps/type/index.js");
 
 require.alias("component-event/index.js", "analytics/deps/event/index.js");
+require.alias("component-event/index.js", "event/index.js");
 
 require.alias("component-json/index.js", "analytics/deps/json/index.js");
+require.alias("component-json/index.js", "json/index.js");
 
 require.alias("component-json-fallback/index.js", "analytics/deps/json-fallback/index.js");
+require.alias("component-json-fallback/index.js", "json-fallback/index.js");
 
 require.alias("component-object/index.js", "analytics/deps/object/index.js");
+require.alias("component-object/index.js", "object/index.js");
 
 require.alias("component-querystring/index.js", "analytics/deps/querystring/index.js");
+require.alias("component-querystring/index.js", "querystring/index.js");
 require.alias("component-trim/index.js", "component-querystring/deps/trim/index.js");
 
-require.alias("redventures-reduce/index.js", "component-querystring/deps/reduce/index.js");
-
 require.alias("component-type/index.js", "analytics/deps/type/index.js");
+require.alias("component-type/index.js", "type/index.js");
 
 require.alias("component-url/index.js", "analytics/deps/url/index.js");
+require.alias("component-url/index.js", "url/index.js");
 
 require.alias("segmentio-after/index.js", "analytics/deps/after/index.js");
+require.alias("segmentio-after/index.js", "after/index.js");
 
 require.alias("segmentio-alias/index.js", "analytics/deps/alias/index.js");
+require.alias("segmentio-alias/index.js", "alias/index.js");
 
 require.alias("segmentio-extend/index.js", "analytics/deps/extend/index.js");
+require.alias("segmentio-extend/index.js", "extend/index.js");
 
 require.alias("segmentio-is-email/index.js", "analytics/deps/is-email/index.js");
+require.alias("segmentio-is-email/index.js", "is-email/index.js");
 
 require.alias("segmentio-load-script/index.js", "analytics/deps/load-script/index.js");
+require.alias("segmentio-load-script/index.js", "load-script/index.js");
 require.alias("component-type/index.js", "segmentio-load-script/deps/type/index.js");
 
 require.alias("segmentio-canonical/index.js", "analytics/deps/canonical/index.js");
+require.alias("segmentio-canonical/index.js", "canonical/index.js");
 
 require.alias("analytics/src/index.js", "analytics/index.js");
 
@@ -3927,5 +3929,5 @@ if (typeof exports == "object") {
 } else if (typeof define == "function" && define.amd) {
   define(function(){ return require("analytics"); });
 } else {
-  window["analytics"] = require("analytics");
+  this["analytics"] = require("analytics");
 }})();

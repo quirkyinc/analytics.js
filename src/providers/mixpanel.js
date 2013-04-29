@@ -103,6 +103,18 @@ module.exports = Provider.extend({
   track : function (event, properties) {
     window.mixpanel.track(event, properties);
 
+    if (this.options.complimentaryEvents) {
+      if (this.options.complimentaryEvents[event]) {
+        var events = this.options.complimentaryEvents[event];
+        if (typeof events === 'string') events = [events];
+        for (i = 0; i < events.length; i++) {
+          var properties = properties || {};
+          properties.originalEvent = event;
+          window.mixpanel.track(events[i], properties);
+        }
+      }
+    }
+    
     // Mixpanel handles revenue with a `transaction` call in their People
     // feature. So if we're using people, record a transcation.
     if (properties && properties.revenue && this.options.people) {
